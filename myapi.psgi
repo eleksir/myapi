@@ -21,7 +21,8 @@ my $main :shared = 0;
 #unless ($main) { threads->create('mythread'); }
 
 my $CONF = loadConf();
-if ($CONF->{api}->{prefix} eq '/') { $CONF->{prefix} = ''; }
+if ($CONF->{api}->{prefix} eq '/') { $CONF->{api}->{prefix} = ''; }
+my $prefix = $CONF->{api}->{prefix};
 
 my $app = sub {
 	my $env = shift;
@@ -30,27 +31,50 @@ my $app = sub {
 	my $status = '404';
 	my $content = 'text/plain';
 
-	if ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/d") {
+	if ($env->{PATH_INFO} eq "$prefix/help") {
+		$status = '200';
+		$msg = << 'EOL';
+/ping - pong
+/ip - your ip
+/getaddrbyname - header hostname must be set
+/getnameaaddr - header adderess must be set
+/punycoder - header hostname must be set
+/punydecoder - header hostname must be set
+/time - current time
+/quote - famous or not famous quotes
+/fortune - synonym for quote
+EOL
+	} elsif ($env->{PATH_INFO} eq "$prefix/d") {
 		$status = '200';
 		$msg = Dumper($env);
-	} elsif ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/ping") {
+	} elsif ($env->{PATH_INFO} eq "$prefix/ping") {
 		($status, $content, $msg) = ping::pong();
-	} elsif ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/ip") {
+	} elsif ($env->{PATH_INFO} eq "$prefix/ip") {
 		($status, $content, $msg) = utils::ip($env);
-	} elsif (($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/fortune") or
-		 ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/quote")) {
+	} elsif (($env->{PATH_INFO} eq "$prefix/getaddrbyname")) {
+		($status, $content, $msg) = utils::getaddrbyname($env->{HTTP_HOSTNAME});
+	} elsif (($env->{PATH_INFO} eq "$prefix/getnamebyaddr")) {
+		($status, $content, $msg) = utils::getnamebyaddr($env->{HTTP_ADDRESS});
+	} elsif (($env->{PATH_INFO} eq "$prefix/punycoder")) {
+		($status, $content, $msg) = utils::punycoder($env->{HTTP_HOSTNAME});
+	} elsif (($env->{PATH_INFO} eq "$prefix/punydecoder")) {
+		($status, $content, $msg) = utils::punydecoder($env->{HTTP_HOSTNAME});
+	} elsif (($env->{PATH_INFO} eq "$prefix/time")) {
+		($status, $content, $msg) = utils::mytime();
+	} elsif (($env->{PATH_INFO} eq "$prefix/fortune") or
+		 ($env->{PATH_INFO} eq "$prefix/quote")) {
 		($status, $content, $msg) = easter_egg::quote();
-	} elsif (($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/chanserv") or
-		 ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/chanServ") or
-		 ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/ChanServ") or
-		 ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/CHANSERV")) {
+	} elsif (($env->{PATH_INFO} eq "$prefix/chanserv") or
+		 ($env->{PATH_INFO} eq "$prefix/chanServ") or
+		 ($env->{PATH_INFO} eq "$prefix/ChanServ") or
+		 ($env->{PATH_INFO} eq "$prefix/CHANSERV")) {
 		($status, $content, $msg) = easter_egg::chanserv();
-	} elsif (($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/nickserv") or
-		 ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/nickServ") or
-		 ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/NickServ") or
-		 ($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/NICKSERV")) {
+	} elsif (($env->{PATH_INFO} eq "$prefix/nickserv") or
+		 ($env->{PATH_INFO} eq "$prefix/nickServ") or
+		 ($env->{PATH_INFO} eq "$prefix/NickServ") or
+		 ($env->{PATH_INFO} eq "$prefix/NICKSERV")) {
 		($status, $content, $msg) = easter_egg::nickserv();
-	} elsif (($env->{PATH_INFO} eq "$CONF->{api}->{prefix}/me")) {
+	} elsif ($env->{PATH_INFO} eq "$prefix/me") {
 		($status, $content, $msg) = easter_egg::me();
 	}
 
@@ -96,7 +120,7 @@ sub mythread () {
 
 
 
-# vim: set ft=perl noet ai :
+# vim: ft=perl noet ai ts=4 sw=4 sts=4:
 __END__
 
 https://toster.ru/q/75226
