@@ -10,6 +10,7 @@ use lib "./lib";
 use ping;
 use utils;
 use easter_egg;
+use image_dl;
 
 sub loadConf();
 sub saveConf($);
@@ -17,12 +18,16 @@ sub saveConf($);
 sub mythread();
 
 my $main :shared = 0;
-
-#unless ($main) { threads->create('mythread'); }
+our @images :shared;
 
 my $CONF = loadConf();
+
 if ($CONF->{api}->{prefix} eq '/') { $CONF->{api}->{prefix} = ''; }
 my $prefix = $CONF->{api}->{prefix};
+
+#unless ($main) { threads->create('__dl_thread'); }
+threads->create('dl_thread', $CONF->{image_dl}->{dir}, $CONF->{image_dl}->{sleep});
+threads->create('mythread');
 
 my $app = sub {
 	my $env = shift;
@@ -48,34 +53,36 @@ EOL
 		$status = '200';
 		$msg = Dumper($env);
 	} elsif ($env->{PATH_INFO} eq "$prefix/ping") {
-		($status, $content, $msg) = ping::pong();
+		($status, $content, $msg) = pong();
 	} elsif ($env->{PATH_INFO} eq "$prefix/ip") {
-		($status, $content, $msg) = utils::ip($env);
+		($status, $content, $msg) = ip($env);
 	} elsif (($env->{PATH_INFO} eq "$prefix/getaddrbyname")) {
-		($status, $content, $msg) = utils::getaddrbyname($env->{HTTP_HOSTNAME});
+		($status, $content, $msg) = getaddrbyname($env->{HTTP_HOSTNAME});
 	} elsif (($env->{PATH_INFO} eq "$prefix/getnamebyaddr")) {
-		($status, $content, $msg) = utils::getnamebyaddr($env->{HTTP_ADDRESS});
+		($status, $content, $msg) = getnamebyaddr($env->{HTTP_ADDRESS});
 	} elsif (($env->{PATH_INFO} eq "$prefix/punycoder")) {
-		($status, $content, $msg) = utils::punycoder($env->{HTTP_HOSTNAME});
+		($status, $content, $msg) = punycoder($env->{HTTP_HOSTNAME});
 	} elsif (($env->{PATH_INFO} eq "$prefix/punydecoder")) {
-		($status, $content, $msg) = utils::punydecoder($env->{HTTP_HOSTNAME});
+		($status, $content, $msg) = punydecoder($env->{HTTP_HOSTNAME});
 	} elsif (($env->{PATH_INFO} eq "$prefix/time")) {
-		($status, $content, $msg) = utils::mytime();
+		($status, $content, $msg) = mytime();
 	} elsif (($env->{PATH_INFO} eq "$prefix/fortune") or
 		 ($env->{PATH_INFO} eq "$prefix/quote")) {
-		($status, $content, $msg) = easter_egg::quote();
+		($status, $content, $msg) = quote();
 	} elsif (($env->{PATH_INFO} eq "$prefix/chanserv") or
 		 ($env->{PATH_INFO} eq "$prefix/chanServ") or
 		 ($env->{PATH_INFO} eq "$prefix/ChanServ") or
 		 ($env->{PATH_INFO} eq "$prefix/CHANSERV")) {
-		($status, $content, $msg) = easter_egg::chanserv();
+		($status, $content, $msg) = chanserv();
 	} elsif (($env->{PATH_INFO} eq "$prefix/nickserv") or
 		 ($env->{PATH_INFO} eq "$prefix/nickServ") or
 		 ($env->{PATH_INFO} eq "$prefix/NickServ") or
 		 ($env->{PATH_INFO} eq "$prefix/NICKSERV")) {
-		($status, $content, $msg) = easter_egg::nickserv();
+		($status, $content, $msg) = nickserv();
 	} elsif ($env->{PATH_INFO} eq "$prefix/me") {
-		($status, $content, $msg) = easter_egg::me();
+		($status, $content, $msg) = me();
+	} elsif ($env->{PATH_INFO} eq "$prefix/image") {
+		($status, $content, $msg) = queue_image($env->{HTTP_LINK}, \@images);
 	}
 
 	return [
@@ -111,9 +118,10 @@ sub mythread () {
 	threads->detach();
 
 	while (1) {
-		sleep 1;
+		sleep 10;
+		push(@images, 'http://192.168.88.1/help.png');
 		open (F, ">>", '/tmp/myapi.txt');
-		print F time() . "\n";
+		print F time() . " " . join(', ', @images) . "\n";
 		close F;
 	}
 }

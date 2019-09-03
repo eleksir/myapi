@@ -1,5 +1,9 @@
 {
     "api" : {
         "prefix" : "/api"
+    },
+    "image_dl" : {
+        "dir" : "/home/eleksr/img-save",
+        "sleep" : 10
     }
 }

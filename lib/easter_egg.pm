@@ -6,6 +6,9 @@ use vars qw/$VERSION/;
 
 $VERSION = "1.0";
 
+use Exporter qw(import);
+our @EXPORT = qw(quote chanserv nickserv me);
+
 sub quote {
 	if (-f "/usr/games/fortune") {
 		return ('200', 'text/plain', `fortune`);

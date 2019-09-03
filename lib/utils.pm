@@ -4,8 +4,11 @@ use strict;
 use Socket; # for name resolves
 use Net::LibIDN ':all';
 use vars qw/$VERSION/;
-
 $VERSION = "1.0";
+
+use Exporter qw(import);
+our @EXPORT = qw(ip getaddrbyname getnamebyaddr pubycoder punydecoder mytime);
+
 
 sub ip ($) {
 	my $env = shift;
