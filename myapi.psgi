@@ -83,7 +83,21 @@ EOL
 		($status, $content, $msg) = me();
 	} elsif ($env->{PATH_INFO} eq "$prefix/image") {
 		($status, $content, $msg) = queue_image($env->{HTTP_LINK}, \@images);
+	} elsif ($env->{PATH_INFO} =~ /$prefix\/upload\/(.+)/) {
+		my $upload = $1;
+		($status, $content, $msg) = ('400', $content, "Bad Request?\n");
+
+		if (defined($env->{HTTP_AUTH}) && ($env->{HTTP_AUTH} eq $CONF->{upload}->{auth})) {
+			if (($upload !~/(\.\.|\\|\/)/) && ($upload =~ /[A-Z|a-z|0-9|_|\-|\+]/)) {
+				if (defined($env->{CONTENT_LENGTH}) && ($env->{CONTENT_LENGTH} > 0)) {
+					($status, $content, $msg) = upload($env->{'psgi.input'}, $env->{CONTENT_LENGTH}, $upload);
+				}
+			}
+		} else {
+			($status, $content, $msg) = ('403', $content, "You're not allowed here. Fuck off.\n");
+		}
 	}
+
 
 	return [
 		$status,

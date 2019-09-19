@@ -5,5 +5,9 @@
     "image_dl" : {
         "dir" : "/home/eleksr/img-save",
         "sleep" : 10
+    },
+    "upload" : {
+        "dir" : "/tmp/upload",
+        "auth": "iliveoncemore"
     }
 }
