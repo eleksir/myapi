@@ -8,3 +8,5 @@
 * shortener api for goo.gl or same services
 * paste api for some pastebins
 * image downloader
+* repo uploader
+* repo metadata re-generator
