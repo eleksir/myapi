@@ -10,3 +10,4 @@
 * image downloader
 * repo uploader
 * repo metadata re-generator
+* simple monitoring api (common metrics: cpu, mem, swap, la, etc)
