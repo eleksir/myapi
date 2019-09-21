@@ -19,9 +19,23 @@ sub upload {
 	my $len = shift;
 	my $name = shift;
 	my ($status, $content, $msg) = ('400', 'text/plain', "Bad Request?\n");
+	my $d;
+	($d, $name) = split(/\//, $name, 2);
+	my $match;
+	return ($status, $content, $msg) unless ($name =~ /^[A-Z|a-z|0-9|_|\-|\+]+$/);
+
+	foreach (keys(%{$c->{upload}->{dir}})) {
+		if ($d eq $_) {
+			$match = 1;
+			last;
+		}
+	}
+
+	return ($status, $content, $msg) unless($match); # incorrect destination in url
+	$name = sprintf("%s/%s", $c->{upload}->{dir}->{$d}, $name);
 
 	if ($len > 0) {
-		if (sysopen (F, sprintf("%s/%s", $c->{upload}->{dir}, $name), O_CREAT|O_TRUNC|O_WRONLY)) {
+		if (sysopen (F, $name, O_CREAT|O_TRUNC|O_WRONLY)) {
 			my $buf;
 			my $readlen = 0;
 			my $totalread = 0;
@@ -33,7 +47,13 @@ sub upload {
 
 			do {
 				$readlen = $input->read($buf, $buflen);
-				syswrite F, $buf, $readlen;
+
+				unless (defined(syswrite F, $buf, $readlen)) { # out of space?
+					close F;
+					unlink $name;
+					return ('500', $content, "An error has occured during upload: $!\n");
+				}
+
 				$totalread += $readlen;
 			} while ($readlen == $buflen);
 

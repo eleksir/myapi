@@ -1,33 +1,21 @@
 use Data::Dumper;
 use strict;
 use warnings "all";
+use diagnostics;
 use JSON::PP;
-use threads;
-use threads::shared;
 
 # my plugins
 use lib "./lib";
+use conf;
 use ping;
 use utils;
 use easter_egg;
-use image_dl;
-
-sub loadConf();
-sub saveConf($);
-
-sub mythread();
-
-my $main :shared = 0;
-our @images :shared;
+use upload;
 
 my $CONF = loadConf();
 
 if ($CONF->{api}->{prefix} eq '/') { $CONF->{api}->{prefix} = ''; }
 my $prefix = $CONF->{api}->{prefix};
-
-#unless ($main) { threads->create('__dl_thread'); }
-threads->create('dl_thread', $CONF->{image_dl}->{dir}, $CONF->{image_dl}->{sleep});
-threads->create('mythread');
 
 my $app = sub {
 	my $env = shift;
@@ -81,14 +69,12 @@ EOL
 		($status, $content, $msg) = nickserv();
 	} elsif ($env->{PATH_INFO} eq "$prefix/me") {
 		($status, $content, $msg) = me();
-	} elsif ($env->{PATH_INFO} eq "$prefix/image") {
-		($status, $content, $msg) = queue_image($env->{HTTP_LINK}, \@images);
 	} elsif ($env->{PATH_INFO} =~ /$prefix\/upload\/(.+)/) {
 		my $upload = $1;
 		($status, $content, $msg) = ('400', $content, "Bad Request?\n");
 
 		if (defined($env->{HTTP_AUTH}) && ($env->{HTTP_AUTH} eq $CONF->{upload}->{auth})) {
-			if (($upload !~/(\.\.|\\|\/)/) && ($upload =~ /[A-Z|a-z|0-9|_|\-|\+]/)) {
+			if ((upload !~ /\.\./) and ($upload =~ /^[A-Z|a-z|0-9|_|\-|\+|\/]+$/)) {
 				if (defined($env->{CONTENT_LENGTH}) && ($env->{CONTENT_LENGTH} > 0)) {
 					($status, $content, $msg) = upload($env->{'psgi.input'}, $env->{CONTENT_LENGTH}, $upload);
 				}
@@ -105,42 +91,6 @@ EOL
 		[ $msg ],
 	];
 };
-
-sub loadConf() {
-	my $c = "data/myapi.json";
-	my $sep = $/;
-	$/ = '';
-	open (C, $c) or die "No conf at $c\n";
-	my $json = <C>;
-	close C;
-	return decode_json($json);
-}
-
-sub saveConf($) {
-	my $c = shift;
-	my $file = "data/myapi.json";
-	my $j = JSON::PP->new->pretty->canonical->indent_length(4);
-	my $json = $j->encode($c);
-	# TODO: make it transactional
-	open (C, ">", $file) or die "Unable to open $file\n";
-	print C $json;
-	close C;
-}
-
-sub mythread () {
-	$main = 1;
-	threads->detach();
-
-	while (1) {
-		sleep 10;
-		push(@images, 'http://192.168.88.1/help.png');
-		open (F, ">>", '/tmp/myapi.txt');
-		print F time() . " " . join(', ', @images) . "\n";
-		close F;
-	}
-}
-
-
 
 # vim: ft=perl noet ai ts=4 sw=4 sts=4:
 __END__

@@ -7,7 +7,9 @@
         "sleep" : 10
     },
     "upload" : {
-        "dir" : "/tmp/upload",
+        "dir" : {
+            "mydir" : "/tmp/upload",
+        },
         "auth": "iliveoncemore"
     }
 }
