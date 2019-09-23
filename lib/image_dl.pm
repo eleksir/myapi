@@ -113,7 +113,10 @@ sub __image_dl_subthread {
 					$savepath = $c->{image_dl}->{dir} . "/" . $fname;
 				}
 
-				__dlfunc($str, $savepath);
+				unless (-f $savepath) {
+					__dlfunc($str, $savepath);
+				}
+
 				undef $savepath;
 				undef $fname;
 			}
