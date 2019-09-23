@@ -3,12 +3,12 @@
         "prefix" : "/api"
     },
     "image_dl" : {
-        "dir" : "/home/eleksr/img-save",
-        "sleep" : 10
+        "dir" : "/data/img-save",
+        "fifo" : "data/image_dl.fifo"
     },
     "upload" : {
         "dir" : {
-            "mydir" : "/tmp/upload",
+            "mydir" : "/data/upload",
         },
         "auth": "iliveoncemore"
     }

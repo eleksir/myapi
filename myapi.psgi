@@ -2,20 +2,23 @@ use Data::Dumper;
 use strict;
 use warnings "all";
 use diagnostics;
-use JSON::PP;
 
 # my plugins
-use lib "./lib";
+use lib qw(./lib ./vendor_perl);
 use conf;
 use ping;
 use utils;
 use easter_egg;
 use upload;
+use image_dl;
+use threads;
 
 my $CONF = loadConf();
 
 if ($CONF->{api}->{prefix} eq '/') { $CONF->{api}->{prefix} = ''; }
 my $prefix = $CONF->{api}->{prefix};
+
+threads->create('image_dl_thread')->detach;
 
 my $app = sub {
 	my $env = shift;
@@ -82,6 +85,8 @@ EOL
 		} else {
 			($status, $content, $msg) = ('403', $content, "You're not allowed here. Fuck off.\n");
 		}
+	} elsif ($env->{PATH_INFO} eq "$prefix/image_dl") {
+		($status, $content, $msg) = image_dl_queue($env->{HTTP_URL});
 	}
 
 
@@ -91,6 +96,7 @@ EOL
 		[ $msg ],
 	];
 };
+
 
 # vim: ft=perl noet ai ts=4 sw=4 sts=4:
 __END__
