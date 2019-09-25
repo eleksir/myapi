@@ -1,3 +1,4 @@
 vendor_perl/**
 data/myapi.json
 data/image_dl.fifo
+data/*.sqlite

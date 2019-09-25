@@ -11,6 +11,7 @@ use utils;
 use easter_egg;
 use upload;
 use image_dl;
+use jabberbot;
 use threads;
 
 my $CONF = loadConf();
@@ -19,6 +20,7 @@ if ($CONF->{api}->{prefix} eq '/') { $CONF->{api}->{prefix} = ''; }
 my $prefix = $CONF->{api}->{prefix};
 
 threads->create('image_dl_thread')->detach;
+threads->create('run_jabberbot')->detach;
 
 my $app = sub {
 	my $env = shift;
