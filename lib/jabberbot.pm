@@ -133,7 +133,12 @@ sub run_jabberbot {
 		forums_and_responses => \%conflist,
 	);
 
-	$bot->Start();
+	while (sleep 3) {
+		eval {
+			$bot->Start();
+	
+		};
+	}
 }
 
 1;
