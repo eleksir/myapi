@@ -30,7 +30,7 @@ sub __background_checks {
 sub __new_bot_message {
 	my %hash = @_;
 	my $bot = $hash{bot_object};
-	my $text = $hash{body};
+	my $text = encode('utf-8', $hash{body});
 
 	if ($hash{'type'} eq "groupchat") {
 		# ignore self messages
@@ -40,7 +40,7 @@ sub __new_bot_message {
 		if ($text =~ /^$qname$/) {
 			$bot->SendGroupMessage($hash{'reply_to'}, "Чего тебе?");
 		}elsif ($text =~ /^$qname[\,|\:]? (.+)/) {
-			$bot->SendGroupMessage($hash{'reply_to'}, $hailo->learn_reply($1));
+			$bot->SendGroupMessage($hash{'reply_to'}, $hailo->learn_reply(decode('utf-8', $1)));
 		} elsif ($text eq "$c->{jabberbot}->{aleesa}->{csign}пинг") {
 			$bot->SendGroupMessage($hash{'reply_to'}, "Понг.");
 		} elsif ($text eq "$c->{jabberbot}->{aleesa}->{csign}ping") {
@@ -84,7 +84,7 @@ sub __new_bot_message {
 			eval {
 				$bot->SendGroupMessage(
 					$hash{'reply_to'},
-					"/me наливает абсент в стопку. Смачив кубик сахара в абсенте кладёт его на дырявую ложечку и пожигает. Как только пламя потухнет, $c->{jabberbot}->{aleesa}->{mucname} размешивает оплавившийся кубик в абсенте и подносит стопку " .(split(/\//,$hash{from_full}))[1] . "."
+					"/me наливает абсент в стопку. Смочив кубик сахара в абсенте кладёт его на дырявую ложечку и пожигает. Как только пламя потухнет, $c->{jabberbot}->{aleesa}->{mucname} размешивает оплавившийся кубик в абсенте и подносит стопку " .(split(/\//,$hash{from_full}))[1] . "."
 				);
 			};
 		} else {
