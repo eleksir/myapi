@@ -11,5 +11,35 @@
             "mydir" : "/data/upload",
         },
         "auth": "iliveoncemore"
+    },
+    "jabberbot": {
+        "bot1" : {
+            "state" : "enabled",
+            "host" : "localhost",
+            "confsrv": "conference.localhost",
+            "room" : "myroom",
+            "authname" : "botuser",
+            "mucname" : "Buldozer",
+            "password": "SECRET",
+            "brain": "./data/buldozer.jabber.sqlite",
+            "csign": "!"
+        },
+        "instances": [ "bot1" ]
+    },
+    "ircbot" : {
+        "bot1" : {
+            "state": "enabled",
+            "brain": "data/threadripper.irc.sqlite",
+            "name" : "bot2",
+            "host" : "localhost",
+            "port" : 6667,
+            "channel" : "#mychan",
+            "csign" : "!"
+        }
+    },
+    "telegrambot" : {
+        "name" : "gozerbot",
+        "token" : "botfather:token",
+        "brain": "./data/gozerbot.telegram.sqlite"
     }
 }

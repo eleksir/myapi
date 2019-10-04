@@ -2,8 +2,6 @@
 * weather grab
 * currency grab
 * joyreactor video grab/stream
-* jabber client (send message on demand)
-* irc client (send message on demand)
 * paste/link shortener
 * shortener api for goo.gl or same services
 * paste api for some pastebins
@@ -11,3 +9,7 @@
 * repo uploader
 * repo metadata re-generator
 * simple monitoring api (common metrics: cpu, mem, swap, la, etc)
+* jabber bot: send memos to offline participants when they return
+* announce youtube video title
+* common bot functions move to separate module
+* bot bridge telegram-irc-jabber
