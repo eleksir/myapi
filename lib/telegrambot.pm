@@ -25,17 +25,47 @@ has token => $c->{telegrambot}->{token};
 sub __on_msg {
 	my ($self, $msg) = @_;
 	my $text = encode('utf-8', $msg->text);
-
+# sometimes shit happens?
+	return unless(defined($text));
 # is this a 1-on-1 ?
 	if ($msg->chat->is_user) {
-		$msg->reply("Я вас не знаю, идите лесом.");
+		$msg->reply("Я вас не знаю, идите нахуй.");
 
 # group chat
 	} else {
 		my $qname = quotemeta($c->{telegrambot}->{name});
-		return unless $text =~ /^$qname[\,|\:]? (.+)/;
-		my $reply = $hailo->learn_reply(decode('utf-8', $1));
-	
+		my $qtname = quotemeta($c->{telegrambot}->{tname});
+		my $csign = quotemeta($c->{telegrambot}->{csign});
+		my $reply;
+
+# simple commands
+		if ($text eq "${csign}ping") {
+			$msg->reply("pong.");
+			return;
+		} elsif (
+				($text eq $qname) or
+				($text eq sprintf("%s", $qtname)) or
+				($text eq sprintf("@%s_bot", $qname)) or # :(
+				($text eq sprintf("%s ", $qtname))
+			) {
+			$msg->reply("Чего?");
+			return;
+		}
+
+# phrase directed to bot
+		if (($text =~ /^${qname}[\,|\:]? (.+)/) or ($text =~ /^${qtname}[\,|\:]? (.+)/)){
+			$reply = $hailo->learn_reply(decode('utf-8', $1));
+# bot mention by name
+		} elsif (($text =~ /.+ ${qname}[\,|\!|\?|\.| ]/) or ($text =~ / $qname$/)) {
+			$reply = $hailo->reply(decode('utf-8', $text));
+# bot mention by teleram name
+		} elsif (($text =~ /.+ ${qtname}[\,|\!|\?|\.| ]/) or ($text =~ / $qtname$/)) {
+			$reply = $hailo->reply(decode('utf-8', $text));
+# just message in chat
+		} else {
+			$hailo->learn(decode('utf-8', $text));
+		}
+
 		if (defined($reply) && $reply ne '') {
 			$msg->reply($reply);
 		}
