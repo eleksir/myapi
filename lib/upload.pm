@@ -15,14 +15,20 @@ use conf;
 my $c = loadConf();
 
 sub upload {
-	my $input = shift;
-	my $len = shift;
-	my $name = shift;
+	my $input = shift;        # file descriptor with data being uploaded
+	my $len = shift;          # expected data length (from client)
+	my $name = shift;         # upload "dir" and filename
 	my ($status, $content, $msg) = ('400', 'text/plain', "Bad Request?\n");
+
+	return ($status, $content, "No Content-Length supplied.\n") unless (defined($len));
+	return ($status, $content, "No name supplied.\n") unless (defined($name));
+
 	my $d;
 	($d, $name) = split(/\//, $name, 2);
+
+	return ($status, $content, "Name does not match pattern.\n") unless ($name =~ /^[A-Z|a-z|0-9|_|\-|\+]+$/);
+
 	my $match;
-	return ($status, $content, $msg) unless ($name =~ /^[A-Z|a-z|0-9|_|\-|\+]+$/);
 
 	foreach (keys(%{$c->{upload}->{dir}})) {
 		if ($d eq $_) {
@@ -31,7 +37,8 @@ sub upload {
 		}
 	}
 
-	return ($status, $content, $msg) unless($match); # incorrect destination in url
+	return ($status, $content, "Incorrect destination dir.\n") unless($match); # incorrect destination in url
+
 	$name = sprintf("%s/%s", $c->{upload}->{dir}->{$d}, $name);
 
 	if ($len > 0) {
@@ -64,7 +71,11 @@ sub upload {
 			} else {
 				($status, $content, $msg) = ('201', $content, "Uploaded.\n");
 			}
+		} else {
+			($status, $content, $msg) = ('500', $content, "Unable to write: $!\n");
 		}
+	} else {
+		$msg = "Incorrect Content-Length\n";
 	}
 
 	return ($status, $content, $msg);
