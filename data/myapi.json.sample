@@ -8,7 +8,7 @@
     },
     "upload" : {
         "dir" : {
-            "mydir" : "/data/upload",
+            "mydir" : "/data/upload"
         },
         "auth": "iliveoncemore"
     },
@@ -41,5 +41,9 @@
         "name" : "gozerbot",
         "token" : "botfather:token",
         "brain": "./data/gozerbot.telegram.sqlite"
-    }
+    },
+    "metagen" : {
+        "myslack" : "/var/www/repo/myslack",
+        "stuff" : "/var/www/repo/stuff"
+    },
 }

@@ -11,6 +11,7 @@ use utils;
 use easter_egg;
 use upload;
 use image_dl;
+use metagen;
 use jabberbot;
 use threads;
 
@@ -20,7 +21,9 @@ if ($CONF->{api}->{prefix} eq '/') { $CONF->{api}->{prefix} = ''; }
 my $prefix = $CONF->{api}->{prefix};
 
 threads->create('image_dl_thread')->detach;
-threads->create('run_jabberbot')->detach;
+#threads->create('run_ircbot')->detach;
+#threads->create('run_jabberbot')->detach;
+#threads->create('run_telegrambot')->detach;
 
 my $app = sub {
 	my $env = shift;
@@ -89,6 +92,10 @@ EOL
 		}
 	} elsif ($env->{PATH_INFO} eq "$prefix/image_dl") {
 		($status, $content, $msg) = image_dl_queue($env->{HTTP_URL});
+	} elsif ($env->{PATH_INFO} eq "$prefix/metagen") {
+		if (defined($env->{HTTP_REPO})) {
+			($status, $content, $msg) = metagen($env->{HTTP_REPO});
+		}
 	}
 
 
