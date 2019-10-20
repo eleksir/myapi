@@ -26,7 +26,7 @@ sub upload {
 	my $d;
 	($d, $name) = split(/\//, $name, 2);
 
-	return ($status, $content, "Name does not match pattern.\n") unless ($name =~ /^[A-Z|a-z|0-9|_|\-|\+]+$/);
+	return ($status, $content, "Name does not match pattern.\n") unless ($name =~ /^[A-Z|a-z|0-9|_|\-|\+|\.]+$/);
 
 	my $match;
 
