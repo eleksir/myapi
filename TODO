@@ -7,7 +7,8 @@
 * paste api for some pastebins
 * image downloader
 * repo uploader
-* repo metadata re-generator
+* metagen.pm: make metadata files in atomic way
+* metagen.pm: validate metadata
 * simple monitoring api (common metrics: cpu, mem, swap, la, etc)
 * jabber bot: send memos to offline participants when they return
 * announce youtube video title

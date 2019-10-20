@@ -3,7 +3,7 @@
 
 # Assume that whole operation takes resonable amount of time to perform it syncronously
 
-# metadata consists of 
+# metadata consists of
 # * CHECKSUMS.md5 or CHECKSUMS.md5.gz - checksum of each file in repo
 # * ChangeLog.txt - optional, contains history of changes, this script does not
 #                   handle it
@@ -12,8 +12,6 @@
 # * PACKAGES.TXT - packages description with metainfo such as relative path in
 #                  repo, compressed size and uncompressed size
 # * MANIFEST.bz2 - list of files in each package
-
-# TODO: make metadata in atomic way
 
 package metagen;
 
@@ -37,7 +35,6 @@ sub __pdate;        # generates current date in pretty format
 
 sub metagen($) {
 	my $dir = shift;
-# TODO: get dir from config!
 	my $c = loadConf();
 	$dir = $c->{metagen}->{$dir};
 
@@ -126,7 +123,6 @@ MD5 message digest                Filename
 	sysopen (CS, "$dir/CHECKSUMS.md5", O_WRONLY|O_TRUNC|O_CREAT) or return  ('500', 'text/plain',  "Unable to open file $dir/CHECKSUMS.md5: $!\n");
 	syswrite CS, $buffer;
 	close CS;
-	$buffer = '';
 
 	my $gz = new Compress::Raw::Zlib::Deflate (
 		-Level => Z_BEST_COMPRESSION,
@@ -148,6 +144,7 @@ MD5 message digest                Filename
 	}
 
 	$gz = '';
+	$buffer = '';
 	sysopen (F, "$dir/CHECKSUMS.md5.gz", O_WRONLY|O_TRUNC|O_CREAT) or return  ('500', 'text/plain',  "Unable to open file $dir/CHECKSUMS.md5.gz\n");
 	binmode F;
 	syswrite F, $output;
@@ -175,9 +172,8 @@ MD5 message digest                Filename
 	binmode F;
 	syswrite F, $buffer;
 	close F;
-	$buffer = '';
 
-	my $gz = new Compress::Raw::Zlib::Deflate (
+	$gz = new Compress::Raw::Zlib::Deflate (
 		-Level => Z_BEST_COMPRESSION,
 		-CRC32 => 1,
 		-ADLER32=> 1,
@@ -197,6 +193,7 @@ MD5 message digest                Filename
 	}
 
 	$gz = '';
+	$buffer = '';
 	sysopen (F, "$dir/PACKAGES.TXT.gz", O_WRONLY|O_TRUNC|O_CREAT) or return  ('500', 'text/plain',  "Unable to open file $dir/PACKAGES.TXT.gz\n");
 	binmode F;
 	syswrite F, $output;
