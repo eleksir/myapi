@@ -72,8 +72,19 @@ sub metagen($) {
 		if ($str =~ /\.lst/) {
 			open (F, '<', "$dir/$str") or return  ('500', 'text/plain',  "Unable to open file $dir/$str: $!\n");
 			my $sep = $/; $/ = undef;
-			my $buf = <F> . "\n";
+			my $buf = <F>;
 
+# we need exactly 1 \n at the end of the buffer
+			while (substr($buf, -1, length($buf) -1) eq "\n") {
+				$buf = substr($buf, 0, -1);
+			}
+			$buf .= "\n\n\n";
+
+# also $buffer must not begin with \n
+			while ($buf =~ /^\n/) {
+				$buf = substr($buf, 1, -1);
+			}
+			
 			if ($bz->bzdeflate($buf, $output) != BZ_RUN_OK) {
 				return  ('500', 'text/plain',  "Unable to perofrm bzip2 compression\n");
 			}
@@ -170,15 +181,15 @@ MD5 message digest                Filename
 			close F;
 
 # we need exactly 1 \n at the end of the buffer
-			while ($buffer =~ /\n$/) {
-				chomp $buffer;
+			while (substr($buffer, -2, -1) eq "\n") {
+				$buffer = substr($buffer, 0, -2);
 			}
 
-			$buffer .= "\n";
+			$buffer .= "\n\n";
 
 # also $buffer must not begin with \n
-			while ($buffer =~ /^\n/) {
-				substr($buffer, $buffer, 1, -1);
+			while (substr($buffer, 0, 1) eq "\n") {
+				$buffer = substr($buffer, 1, -1);
 			}
 		}
 	}
