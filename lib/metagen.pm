@@ -13,6 +13,9 @@
 #                  repo, compressed size and uncompressed size
 # * MANIFEST.bz2 - list of files in each package
 
+# TODO: make metadata in atomic way
+# TODO: validate metadata
+
 package metagen;
 
 use warnings "all";
@@ -35,6 +38,7 @@ sub __pdate;        # generates current date in pretty format
 
 sub metagen($) {
 	my $dir = shift;
+# TODO: get dir from config!
 	my $c = loadConf();
 	$dir = $c->{metagen}->{$dir};
 
@@ -163,8 +167,19 @@ MD5 message digest                Filename
 				$buffer .= $_;
 			}
 
-			chomp $buffer;
 			close F;
+
+# we need exactly 1 \n at the end of the buffer
+			while ($buffer =~ /\n$/) {
+				chomp $buffer;
+			}
+
+			$buffer .= "\n";
+
+# also $buffer must not begin with \n
+			while ($buffer =~ /^\n/) {
+				substr($buffer, $buffer, 1, -1);
+			}
 		}
 	}
 
