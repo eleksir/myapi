@@ -141,3 +141,5 @@ sub run_jabberbot {
 }
 
 1;
+
+# vim: set ft=perl noet ai ts=4 sw=4 sts=4:

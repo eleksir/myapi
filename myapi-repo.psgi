@@ -51,4 +51,3 @@ my $app = sub {
 
 __END__
 # vim: set ft=perl noet ai ts=4 sw=4 sts=4:
-
