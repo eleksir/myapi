@@ -38,7 +38,6 @@ sub __pdate;        # generates current date in pretty format
 
 sub metagen($) {
 	my $dir = shift;
-# TODO: get dir from config!
 	my $c = loadConf();
 	$dir = $c->{metagen}->{$dir};
 
@@ -268,4 +267,4 @@ sub __pdate {
 
 1;
 
-# vim: ft=perl noet ai ts=4 sw=4 sts=4:
+# vim: set ft=perl noet ai ts=4 sw=4 sts=4 :

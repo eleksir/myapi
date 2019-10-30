@@ -1,18 +1,14 @@
-use Data::Dumper;
 use strict;
 use warnings "all";
 use diagnostics;
 
 # my plugins
-use lib qw(./lib ./vendor_perl);
+use lib qw(./lib ./vendor_perl ./vendor_perl/lib/perl5);
 use conf;
 use ping;
 use utils;
 use easter_egg;
-use upload;
 use image_dl;
-use metagen;
-use jabberbot;
 use threads;
 
 my $CONF = loadConf();
@@ -21,9 +17,6 @@ if ($CONF->{api}->{prefix} eq '/') { $CONF->{api}->{prefix} = ''; }
 my $prefix = $CONF->{api}->{prefix};
 
 threads->create('image_dl_thread')->detach;
-#threads->create('run_ircbot')->detach;
-#threads->create('run_jabberbot')->detach;
-#threads->create('run_telegrambot')->detach;
 
 my $app = sub {
 	my $env = shift;
@@ -77,25 +70,8 @@ EOL
 		($status, $content, $msg) = nickserv();
 	} elsif ($env->{PATH_INFO} eq "$prefix/me") {
 		($status, $content, $msg) = me();
-	} elsif ($env->{PATH_INFO} =~ /$prefix\/upload\/(.+)/) {
-		my $upload = $1;
-		($status, $content, $msg) = ('400', $content, "Bad Request?\n");
-
-		if (defined($env->{HTTP_AUTH}) && ($env->{HTTP_AUTH} eq $CONF->{upload}->{auth})) {
-			if ((upload !~ /\.\./) and ($upload =~ /^[A-Z|a-z|0-9|_|\-|\+|\/]+$/)) {
-				if (defined($env->{CONTENT_LENGTH}) && ($env->{CONTENT_LENGTH} > 0)) {
-					($status, $content, $msg) = upload($env->{'psgi.input'}, $env->{CONTENT_LENGTH}, $upload);
-				}
-			}
-		} else {
-			($status, $content, $msg) = ('403', $content, "You're not allowed here. Fuck off.\n");
-		}
 	} elsif ($env->{PATH_INFO} eq "$prefix/image_dl") {
 		($status, $content, $msg) = image_dl_queue($env->{HTTP_URL});
-	} elsif ($env->{PATH_INFO} eq "$prefix/metagen") {
-		if (defined($env->{HTTP_REPO})) {
-			($status, $content, $msg) = metagen($env->{HTTP_REPO});
-		}
 	}
 
 
@@ -107,9 +83,12 @@ EOL
 };
 
 
-# vim: ft=perl noet ai ts=4 sw=4 sts=4:
 __END__
 
 https://toster.ru/q/75226
 
 http://www.cbr.ru/scripts/XML_daily.asp
+
+
+
+# vim: ft=perl noet ai ts=4 sw=4 sts=4:

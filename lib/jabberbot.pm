@@ -136,7 +136,6 @@ sub run_jabberbot {
 	while (sleep 3) {
 		eval {
 			$bot->Start();
-	
 		};
 	}
 }
