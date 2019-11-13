@@ -6,6 +6,7 @@ use lib qw(./lib ./vendor_perl ./vendor_perl/lib/perl5);
 use conf;
 use upload;
 use metagen;
+use buildinfo;
 
 my $CONF = loadConf();
 
@@ -38,7 +39,12 @@ my $app = sub {
 		if (defined($env->{HTTP_REPO})) {
 			($status, $content, $msg) = metagen($env->{HTTP_REPO});
 		}
+	} elsif ($env->{PATH_INFO} eq "$prefix/buildinfo") {
+		if (defined($env->{HTTP_REPO})) {
+			($status, $content, $msg) = buildinfo($env->{HTTP_REPO});
+		}
 	}
+
 
 
 	return [

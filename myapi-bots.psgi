@@ -5,7 +5,7 @@ use warnings "all";
 use lib qw(./lib ./vendor_perl ./vendor_perl/lib/perl5);
 use conf;
 use jabberbot;
-use telegrambot;
+use ircbot;
 use threads;
 
 my $CONF = loadConf();
@@ -14,7 +14,7 @@ if ($CONF->{api}->{prefix} eq '/') { $CONF->{api}->{prefix} = ''; }
 my $prefix = $CONF->{api}->{prefix};
 
 threads->create('run_jabberbot')->detach;
-threads->create('run_telegrambot')->detach;
+threads->create('run_ircbot')->detach;
 
 my $app = sub {
 	my $env = shift;

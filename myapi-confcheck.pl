@@ -13,7 +13,7 @@ open (C, $conf) || die "No such file $conf\n";
 $jstr = <C>;
 close C;
 
-my $c = decode_json($jstr);
+my $c = JSON::PP->new->decode($jstr);
 
 my $j = JSON::PP->new->pretty->canonical->indent_length(4);
 print $j->encode($c);

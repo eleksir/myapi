@@ -46,4 +46,8 @@
         "myslack" : "/var/www/repo/myslack",
         "stuff" : "/var/www/repo/stuff"
     },
+    "buildinfo" : {
+        "backports" : "/path/to/myslack.json",
+        "thrirdparty" : "/path/to/stuff.json"
+    }
 }

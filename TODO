@@ -5,12 +5,10 @@
 * paste/link shortener
 * shortener api for goo.gl or same services
 * paste api for some pastebins
-* image downloader
-* repo uploader
 * metagen.pm: make metadata files in atomic way
 * metagen.pm: validate metadata
 * simple monitoring api (common metrics: cpu, mem, swap, la, etc)
 * jabber bot: send memos to offline participants when they return
 * announce youtube video title
 * common bot functions move to separate module
-* bot bridge telegram-irc-jabber
+* anounce html page title
