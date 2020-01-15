@@ -53,13 +53,13 @@ sub __on_msg {
 		}
 
 # phrase directed to bot
-		if (($text =~ /^${qname}[\,|\:]? (.+)/) or ($text =~ /^${qtname}[\,|\:]? (.+)/)){
+		if ((lc($text) =~ /^${qname}[\,|\:]? (.+)/) or (lc($text) =~ /^${qtname}[\,|\:]? (.+)/)){
 			$reply = $hailo->learn_reply(decode('utf-8', $1));
 # bot mention by name
-		} elsif (($text =~ /.+ ${qname}[\,|\!|\?|\.| ]/) or ($text =~ / $qname$/)) {
+		} elsif ((lc($text) =~ /.+ ${qname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qname$/)) {
 			$reply = $hailo->reply(decode('utf-8', $text));
 # bot mention by teleram name
-		} elsif (($text =~ /.+ ${qtname}[\,|\!|\?|\.| ]/) or ($text =~ / $qtname$/)) {
+		} elsif ((lc($text) =~ /.+ ${qtname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qtname$/)) {
 			$reply = $hailo->reply(decode('utf-8', $text));
 # just message in chat
 		} else {
