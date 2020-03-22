@@ -33,37 +33,78 @@ sub __on_msg {
 
 # group chat
 	} else {
-		my $qname = quotemeta($c->{telegrambot}->{name});
-		my $qtname = quotemeta($c->{telegrambot}->{tname});
-		my $csign = quotemeta($c->{telegrambot}->{csign});
 		my $reply;
 
-# simple commands
-		if ($text eq "${csign}ping") {
-			$msg->reply("pong.");
-			return;
-		} elsif (
-				($text eq $qname) or
-				($text eq sprintf("%s", $qtname)) or
-				($text eq sprintf("@%s_bot", $qname)) or # :(
-				($text eq sprintf("%s ", $qtname))
-			) {
-			$msg->reply("Чего?");
-			return;
-		}
+		if ($msg->chat->new_chat_members) {
+			my $usernick = '';
 
-# phrase directed to bot
-		if ((lc($text) =~ /^${qname}[\,|\:]? (.+)/) or (lc($text) =~ /^${qtname}[\,|\:]? (.+)/)){
-			$reply = $hailo->learn_reply(decode('utf-8', $1));
-# bot mention by name
-		} elsif ((lc($text) =~ /.+ ${qname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qname$/)) {
-			$reply = $hailo->reply(decode('utf-8', $text));
-# bot mention by teleram name
-		} elsif ((lc($text) =~ /.+ ${qtname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qtname$/)) {
-			$reply = $hailo->reply(decode('utf-8', $text));
-# just message in chat
+			if (defined($msg->chat->new_chat_members->first_name) and ($msg->chat->new_chat_members->first_name ne '')) {
+				$usernick .= $msg->chat->new_chat_members->first_name;
+			}
+
+			if (defined($msg->chat->new_chat_members->last_name) and ($msg->chat->new_chat_members->last_name ne '')) {
+				if ($usernick ne '') {
+					$usernick .= ' ' . $msg->chat->new_chat_members->first_name;
+				} else {
+					$usernick .= $msg->chat->new_chat_members->first_name;
+				}
+			}
+
+			$usernick = $msg->chat->new_chat_members->username if ($usernick =~ /^\s+$/);
+
+			$reply = sprintf("Добрый вечер, %s, располагайтесь, наслаждайтесь. Мы вас внимательно алё.", $usernick);
+		} elsif ($msg->chat->left_chat_member) {
+			my $usernick = '';
+
+			if (defined($msg->chat->left_chat_member->first_name) and ($msg->chat->left_chat_member->first_name ne '')) {
+				$usernick .= $msg->chat->left_chat_member->first_name;
+			}
+
+			if (defined($msg->chat->left_chat_member->last_name) and ($msg->chat->left_chat_member->last_name ne '')) {
+				if ($usernick ne '') {
+					$usernick .= ' ' . $msg->chat->left_chat_member->first_name;
+				} else {
+					$usernick .= $msg->chat->left_chat_member->first_name;
+				}
+			}
+
+			$usernick = $msg->chat->left_chat_member->username if ($usernick =~ /^\s+$/);
+
+			$reply = sprintf("До свидания, уважаемый %s. Возвращайтесь ещё. Мы будем рады вас опять...", $usernick);
+		} elsif ($msg->chat->pinned_message) {
+			$reply = "Где мои ржавые гвозди и кувалдометр? Ща прибъём это в топик!";
 		} else {
-			$hailo->learn(decode('utf-8', $text));
+			my $qname = quotemeta($c->{telegrambot}->{name});
+			my $qtname = quotemeta($c->{telegrambot}->{tname});
+			my $csign = quotemeta($c->{telegrambot}->{csign});
+
+	# simple commands
+			if ($text eq "${csign}ping") {
+				$msg->reply("pong.");
+				return;
+			} elsif (
+					($text eq $qname) or
+					($text eq sprintf("%s", $qtname)) or
+					($text eq sprintf("@%s_bot", $qname)) or # :(
+					($text eq sprintf("%s ", $qtname))
+				) {
+				$msg->reply("Чего?");
+				return;
+			}
+
+	# phrase directed to bot
+			if ((lc($text) =~ /^${qname}[\,|\:]? (.+)/) or (lc($text) =~ /^${qtname}[\,|\:]? (.+)/)){
+				$reply = $hailo->learn_reply(decode('utf-8', $1));
+	# bot mention by name
+			} elsif ((lc($text) =~ /.+ ${qname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qname$/)) {
+				$reply = $hailo->reply(decode('utf-8', $text));
+	# bot mention by teleram name
+			} elsif ((lc($text) =~ /.+ ${qtname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qtname$/)) {
+				$reply = $hailo->reply(decode('utf-8', $text));
+	# just message in chat
+			} else {
+				$hailo->learn(decode('utf-8', $text));
+			}
 		}
 
 		if (defined($reply) && $reply ne '') {
