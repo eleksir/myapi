@@ -2,7 +2,6 @@ package telegrambot;
 
 use strict;
 use warnings "all";
-use diagnostics;
 use vars qw/$VERSION/;
 use v5.10.0;
 use Hailo;
@@ -24,18 +23,16 @@ has token => $c->{telegrambot}->{token};
 
 sub __on_msg {
 	my ($self, $msg) = @_;
-	my $text = encode('utf-8', $msg->text);
-# sometimes shit happens?
-	return unless(defined($text));
 # is this a 1-on-1 ?
-	if ($msg->chat->is_user) {
-		$msg->reply("Я вас не знаю, идите нахуй.");
+	if ($msg->chat->type eq 'private') {
+		$msg->reply("Общайтесь в чате \@slackware_ru");
 
 # group chat
-	} else {
+	} elsif (($msg->chat->type eq 'supergroup') or ($msg->chat->type eq 'group')) {
 		my $reply;
 
-		if ($msg->chat->new_chat_members) {
+		if ($msg->chat->can('new_chat_members')) {
+warn sprintf("New member in chat. %s", Dumper($msg->chat)),
 			my $usernick = '';
 
 			if (defined($msg->chat->new_chat_members->first_name) and ($msg->chat->new_chat_members->first_name ne '')) {
@@ -53,7 +50,8 @@ sub __on_msg {
 			$usernick = $msg->chat->new_chat_members->username if ($usernick =~ /^\s+$/);
 
 			$reply = sprintf("Добрый вечер, %s, располагайтесь, наслаждайтесь. Мы вас внимательно алё.", $usernick);
-		} elsif ($msg->chat->left_chat_member) {
+		} elsif ($msg->chat->can('left_chat_member')) {
+warn sprintf("Member left chat. %s", Dumper($msg->chat));
 			my $usernick = '';
 
 			if (defined($msg->chat->left_chat_member->first_name) and ($msg->chat->left_chat_member->first_name ne '')) {
@@ -71,14 +69,17 @@ sub __on_msg {
 			$usernick = $msg->chat->left_chat_member->username if ($usernick =~ /^\s+$/);
 
 			$reply = sprintf("До свидания, уважаемый %s. Возвращайтесь ещё. Мы будем рады вас опять...", $usernick);
-		} elsif ($msg->chat->pinned_message) {
-			$reply = "Где мои ржавые гвозди и кувалдометр? Ща прибъём это в топик!";
 		} else {
+			return unless(defined($msg->text));
+			my $text = encode('utf-8', $msg->text);
+# sometimes shit happens?
+			return unless(defined($text));
+
 			my $qname = quotemeta($c->{telegrambot}->{name});
 			my $qtname = quotemeta($c->{telegrambot}->{tname});
 			my $csign = quotemeta($c->{telegrambot}->{csign});
 
-	# simple commands
+# simple commands
 			if ($text eq "${csign}ping") {
 				$msg->reply("pong.");
 				return;
@@ -92,16 +93,16 @@ sub __on_msg {
 				return;
 			}
 
-	# phrase directed to bot
+# phrase directed to bot
 			if ((lc($text) =~ /^${qname}[\,|\:]? (.+)/) or (lc($text) =~ /^${qtname}[\,|\:]? (.+)/)){
 				$reply = $hailo->learn_reply(decode('utf-8', $1));
-	# bot mention by name
+# bot mention by name
 			} elsif ((lc($text) =~ /.+ ${qname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qname$/)) {
 				$reply = $hailo->reply(decode('utf-8', $text));
-	# bot mention by teleram name
+# bot mention by teleram name
 			} elsif ((lc($text) =~ /.+ ${qtname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qtname$/)) {
 				$reply = $hailo->reply(decode('utf-8', $text));
-	# just message in chat
+# just message in chat
 			} else {
 				$hailo->learn(decode('utf-8', $text));
 			}
@@ -110,6 +111,9 @@ sub __on_msg {
 		if (defined($reply) && $reply ne '') {
 			$msg->reply($reply);
 		}
+# should be channel, so we can't talk
+	} else {
+		return;
 	}
 }
 
