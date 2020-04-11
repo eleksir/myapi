@@ -31,8 +31,28 @@ unless (-p $c->{image_dl}->{fifo}) {
 sub image_dl_queue ($) {
 	my $str = shift;
 	chomp($str);
-	sysopen (my $h, $c->{image_dl}->{fifo}, O_WRONLY) or return ('500', 'text/plain', "Unable to write url to queue: $!\n");
-	syswrite $h, "$str\n", length("$str\n");
+	$str .= "\n";
+
+	sysopen (my $h, $c->{image_dl}->{fifo}, O_WRONLY) or do {
+		warn "Unable to open $c->{image_dl}->{fifo}: $!";
+		return ('500', 'text/plain', "Unable to write url to queue: $!\n");
+	};
+
+	use bytes;
+	my $len = length($str);
+	no bytes;
+
+	my $res = syswrite($h, $str, $len) or do {
+		warn "Unable to put download to queue: $!";
+		return('500', 'text/plain', "Unable to put download to queue\n");
+	};
+
+	if ($res != $len) {
+		close $h;
+		warn "Incorrect amount of bytes written to queue: $!";
+		return('500', 'text/plain', "Incorrect amount of bytes written to to queue\n");
+	}
+
 	close $h;
 	return('200', 'text/plain', "Download queued\n");
 }
@@ -41,7 +61,7 @@ sub __urlencode($) {
 	my $str = shift;
 	my $urlobj = url $str;
 	$str = $urlobj->as_string;
-	undef $urlobj;
+	$urlobj = undef; undef $urlobj;
 	return $str;
 }
 
@@ -53,7 +73,7 @@ sub __is_picture($) {
 	eval {
 		my $http = HTTP::Tiny->new();
 		$r = $http->request('HEAD', $url);
-		undef $http;
+		$http = undef; undef $http;
 	};
 
 	return undef if (defined($@) && $@ ne ''); # means eval with error
@@ -82,7 +102,7 @@ sub __dlfunc(@) {
 	eval {
 		my $http1 = HTTP::Tiny->new();
 		$http1->mirror($url, $file);
-		undef $http1;
+		$http1 = undef; undef $http1;
 	};
 }
 
@@ -104,7 +124,14 @@ sub __image_dl_subthread {
 
 			if ($extension) {
 				my $savepath = $c->{image_dl}->{dir};
-				mkdir ($savepath) unless (-d $savepath);
+
+				unless (-d $savepath) {
+					mkdir ($savepath) or do {
+						warn "[FATA] Unable to create $savepath: $!";
+						next;
+					}
+				}
+
 				my $fname = $str;
 				$fname =~ s/[^\w!., -#]/_/g;
 				$savepath = sprintf("%s/%s.%s", $savepath, $fname, $extension);
@@ -127,7 +154,7 @@ sub __image_dl_subthread {
 }
 
 sub image_dl_thread {
-	open (my $h, "<", $c->{image_dl}->{fifo}) or die "Unable to open queue: $!\n";
+	open (my $h, "<", $c->{image_dl}->{fifo}) or die "[FATA] Unable to open queue: $!\n";
 	threads->create('__image_dl_subthread')->detach();
 	do {} while (! $ready);
 	threads::yield;
@@ -137,7 +164,7 @@ sub image_dl_thread {
 
 		if ((! defined($str)) || ($str eq "\n")) {
 			close $h;
-			open ($h, "<", $c->{image_dl}->{fifo}) or die "Unable to open queue: $!\n";
+			open ($h, "<", $c->{image_dl}->{fifo}) or die "[FATA] Unable to open queue $c->{image_dl}->{fifo}: $!";
 			next;
 		}
 
@@ -161,7 +188,7 @@ sub image_dl_thread {
 		}
 
 		close $h;
-		open ($h, "<", $c->{image_dl}->{fifo}) or die "Unable to open queue: $!\n";
+		open ($h, "<", $c->{image_dl}->{fifo}) or die "[FATA] Unable to open queue $c->{image_dl}->{fifo}: $!\n";
 	}
 
 	close $h;
