@@ -1,7 +1,6 @@
 * image 'stream' (wallpaper/just image)
 * weather grab
 * currency grab
-* joyreactor video grab/stream
 * paste/link shortener
 * shortener api for goo.gl or same services
 * paste api for some pastebins
@@ -11,4 +10,7 @@
 * jabber bot: send memos to offline participants when they return
 * announce youtube video title
 * common bot functions move to separate module
+* make bot bridge
 * anounce html page title
+* split one big service into mass of "micro"-services, fucking unix-style
+* re-work README.md - describe services via .psgi-files.
