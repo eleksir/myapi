@@ -4,7 +4,7 @@ use strict;
 use warnings "all";
 use vars qw/$VERSION/;
 use conf;
-use JSON::PP;
+use JSON::XS;
 use Data::Dumper;
 
 use Exporter qw(import);
@@ -33,8 +33,20 @@ sub buildinfo($) {
 		return ($status, $content, $msg);
 	};
 
-	my $sep = $/;
-	my $json = <JSON>;
+	my $len = (stat($c->{buildinfo}->{$config}))[7];
+	my $json;
+	my $readlen = read(JSON, $json, $len);
+
+	unless (defined($readlen)) {
+		warn "[FATA] Unable to read $c->{buildinfo}->{$config}: $!";
+		return ('500', $content, "Unable to read $c->{buildinfo}->{$config}: $!\n");
+	}
+
+	if ($len != $readlen)) {
+		warn "[FATA] Size of $c->{buildinfo}->{$config} $len bytes but actually read $readlen bytes";
+		return ('500', $content, "Unable to read $c->{buildinfo}->{$config}\n");
+	}
+
 	close JSON;
 	$/ = $sep;
 
@@ -49,7 +61,7 @@ sub buildinfo($) {
 		return ($status, $content, $msg);
 	}
 
-	$json = JSON::PP->new->pretty->canonical->indent_length(4)->encode($j->{$package}) or do {
+	$json = JSON::XS->new->pretty->canonical->indent(1)->encode($j->{$package}) or do {
 		$status = '500';
 		$msg = "Unable to encode json.\n";
 		return ($status, $content, $msg);
