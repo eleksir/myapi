@@ -54,9 +54,19 @@ sub upload {
 			do {
 				$readlen = $input->read($buf, $buflen);
 
-				unless (defined(syswrite F, $buf, $readlen)) { # out of space?
+				my $written = syswrite F, $buf, $readlen;
+
+				unless (defined($written)) { # out of space?
 					close F;
 					unlink $name;
+					warn "[FATA] Unable to write to $name: $!";
+					return ('500', $content, "An error has occured during upload: $!\n");
+				}
+
+				if ($readlen != $written) {
+					close F;
+					unlink $name;
+					warn "[FATA] Must write $readlen bytes, but actualy wrote $written bytes to $name";
 					return ('500', $content, "An error has occured during upload: $!\n");
 				}
 
@@ -71,6 +81,7 @@ sub upload {
 				($status, $content, $msg) = ('201', $content, "Uploaded.\n");
 			}
 		} else {
+			warn "[FATA] Unable to open file $name: $!";
 			($status, $content, $msg) = ('500', $content, "Unable to write: $!\n");
 		}
 	} else {
