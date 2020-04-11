@@ -2,7 +2,6 @@ package ircbot;
 
 use strict;
 use warnings "all";
-use diagnostics;
 use vars qw/$VERSION/;
 use Net::IRC;
 use v5.10.0;
