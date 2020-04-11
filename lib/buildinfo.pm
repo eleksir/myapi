@@ -42,13 +42,12 @@ sub buildinfo($) {
 		return ('500', $content, "Unable to read $c->{buildinfo}->{$config}: $!\n");
 	}
 
-	if ($len != $readlen)) {
+	if ($len != $readlen) {
 		warn "[FATA] Size of $c->{buildinfo}->{$config} $len bytes but actually read $readlen bytes";
 		return ('500', $content, "Unable to read $c->{buildinfo}->{$config}\n");
 	}
 
 	close JSON;
-	$/ = $sep;
 
 	my $j = eval { decode_json($json) } or do {
 		$status = '500';
