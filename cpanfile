@@ -1,4 +1,5 @@
 requires 'local::lib';
+requires 'JSON::XS';
 requires 'HTTP::Tiny';
 requires 'Hailo';
 requires 'IO::Socket::SSL';
