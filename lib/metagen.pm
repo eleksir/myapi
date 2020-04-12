@@ -42,10 +42,14 @@ sub metagen($) {
 	$dir = $c->{metagen}->{$dir};
 
 	unless (defined($dir)) {
-		return ('400', 'text/plain',  "No such repository\n");
+		return ('400', 'text/plain', "No such repository\n");
 	}
 
-	opendir(my $dh, $dir) or return  ('500', 'text/plain',  "Unable to read $dir : $!\n");
+	opendir(my $dh, $dir) or do {
+		warn "[FATA] Unable to read $dir : $!";
+		return  ('500', 'text/plain', "Unable to read $dir : $!\n");
+	};
+
 	my @list;
 
 	while (readdir($dh)) {
@@ -62,52 +66,87 @@ sub metagen($) {
 	my $bz = new Compress::Raw::Bzip2 1, 9, 0;
 
 	unless (defined($bz)) {
-		return  ('500', 'text/plain',  "Unable to create bz object\n");
+		warn "[FATA] Unable to create bz object";
+		return  ('500', 'text/plain', "Unable to create bz object\n");
 	}
 
 	my $output;
+	my $buf;
 
 	foreach my $str (@list) {
 		if ($str =~ /\.lst/) {
-			open (F, '<', "$dir/$str") or return  ('500', 'text/plain',  "Unable to open file $dir/$str: $!\n");
-			my $sep = $/; $/ = undef;
-			my $buf = <F>;
+			open (F, '<', "$dir/$str") or do {
+				warn "[FATA] Unable to open file $dir/$str: $!";
+				return  ('500', 'text/plain',  "Unable to open file $dir/$str: $!\n");
+			};
+
+			my $len = (stat("$dir/$str"))[7];
+			my $readlen = read(F, $buf, $len);
+
+			unless (defined($readlen)) {
+				warn "[FATA] Unable to read $dir/$str: $!";
+				return ('500', 'text/plain', "Unable to read $dir/$str: $!\n");
+			}
+
+			if ($readlen != $len) {
+				warn "[FATA] Unable to read $dir/$str: amount of read bytes does not match with file size";
+				return ('500', 'text/plain', "Unable to read $dir/$str\n");
+			}
 
 # we need exactly 1 \n at the end of the buffer
-			while (substr($buf, -1, length($buf) -1) eq "\n") {
-				$buf = substr($buf, 0, -1);
+			while (substr($buf, -2, -1) eq "\n") {
+				chop($buf);
 			}
 			$buf .= "\n\n\n";
 
 # also $buffer must not begin with \n
-			while ($buf =~ /^\n/) {
+			while (substr($buf, 0, 1) eq "\n") {
 				$buf = substr($buf, 1, -1);
 			}
 			
 			if ($bz->bzdeflate($buf, $output) != BZ_RUN_OK) {
-				return  ('500', 'text/plain',  "Unable to perofrm bzip2 compression\n");
+				warn "[FATA] Unable to perofrm bzip2 compression";
+				return  ('500', 'text/plain',  "Unable to perform bzip2 compression\n");
 			}
 
 			if ($bz->bzflush($output) != BZ_RUN_OK) {
+				warn "[FATA] Unable to flush bz buffer";
 				return  ('500', 'text/plain',  "Unable to flush bz buffer\n");
 			}
 
-			$/ = $sep; undef $sep;
 			close F;
 		}
 	}
 
 	if ($bz->bzclose($output) != BZ_STREAM_END) {
+		warn "[FATA] Unable to flush and close bz buffer";
 		return  ('500', 'text/plain',  "Unable to flush and close bz buffer\n");
 	}
 
 	$bz = '';
-	sysopen(BZ, "$dir/MANIFEST.bz2", O_WRONLY|O_TRUNC|O_CREAT) or return  ('500', 'text/plain',  "Unable to open $dir/MANIFEST.bz2: $!\n");
-	binmode(BZ);
-	syswrite BZ, $output;
-	close BZ;
-	$output = '';
 
+	sysopen(BZ, "$dir/MANIFEST.bz2", O_WRONLY|O_TRUNC|O_CREAT) or do {
+		warn "[FATA] Unable to open $dir/MANIFEST.bz2: $!";
+		return ('500', 'text/plain', "Unable to open $dir/MANIFEST.bz2: $!\n");
+	};
+
+	binmode(BZ);
+	my $len = length($output);
+	my $written = syswrite(BZ, $output, $len);
+	close BZ;
+
+	unless (defined($written)) {
+		warn "[FATA] Unable to write $dir/MANIFEST.bz2: $!";
+		return ('500', 'text/plain', "Unable to write $dir/MANIFEST.bz2: $!\n");
+	}
+
+	if ($len != $written) {
+		warn "[FATA] Unable to write $dir/MANIFEST.bz2: written bytes does not match with buffer size";
+		return ('500', 'text/plain', "Unable to write $dir/MANIFEST.bz2: written bytes does not match with buffer size\n");
+	}
+
+	$output = '';
+	$buf = '';
 # checksums
 	my $buffer = 'These are the MD5 message digests for the files in this directory.
 If you want to test your files, use \'md5sum\' and compare the values to
@@ -128,15 +167,36 @@ MD5 message digest                Filename
 		next if ($str =~ /CHECKSUMS.md5.gz$/);
 
 		if ($str =~ /\.md5/) {
-			sysopen (F, "$dir/$str", O_RDONLY) or return  ('500', 'text/plain',  "Unable to open file $dir/$str: $!\n");
+			sysopen (F, "$dir/$str", O_RDONLY) or do {
+				warn "[FATA] Unable to open file $dir/$str: $!";
+				return  ('500', 'text/plain',  "Unable to open file $dir/$str: $!\n");
+			};
+
 			$buffer .= <F>;
 			close F;
 		}
 	}
 
-	sysopen (CS, "$dir/CHECKSUMS.md5", O_WRONLY|O_TRUNC|O_CREAT) or return  ('500', 'text/plain',  "Unable to open file $dir/CHECKSUMS.md5: $!\n");
-	syswrite CS, $buffer;
+	sysopen (CS, "$dir/CHECKSUMS.md5", O_WRONLY|O_TRUNC|O_CREAT) or do {
+		warn "[FATA] Unable to open file $dir/CHECKSUMS.md5: $!";
+		return ('500', 'text/plain', "Unable to open file $dir/CHECKSUMS.md5: $!\n");
+	};
+
+	use bytes;
+	$len = length($buffer);
+	no bytes;
+	$written = syswrite(CS, $buffer, $len);
 	close CS;
+
+	unless (defined($written)) {
+		warn "[FATA] Unable to write $dir/CHECKSUMS.md5: $!";
+		return ('500', 'text/plain', "Unable to write $dir/CHECKSUMS.md5: $!\n");
+	}
+
+	if ($len != $written) {
+		warn "[FATA] Unable to write $dir/CHECKSUMS.md5: written bytes does not match with buffer size";
+		return ('500', 'text/plain', "Unable to write $dir/CHECKSUMS.md5: written bytes does not match with buffer size\n");
+	}
 
 	my $gz = new Compress::Raw::Zlib::Deflate (
 		-Level => Z_BEST_COMPRESSION,
@@ -146,23 +206,43 @@ MD5 message digest                Filename
 	);
 
 	unless (defined($gz)) {
+		warn "[FATA] Unable to create gz object";
 		return  ('500', 'text/plain',  "Unable to create gz object\n");
 	}
 
 	if ($gz->deflate($buffer, $output) != Z_OK) {
+		warn "[FATA] Unable to deflate";
 		return  ('500', 'text/plain',  "Unable to deflate\n");
 	}
 
 	if ($gz->flush($output) != Z_OK) {
+		warn "[FATA] Unable to flush gz object";
 		return  ('500', 'text/plain',  "Unable to flush gz object\n");
 	}
 
 	$gz = '';
 	$buffer = '';
-	sysopen (F, "$dir/CHECKSUMS.md5.gz", O_WRONLY|O_TRUNC|O_CREAT) or return  ('500', 'text/plain',  "Unable to open file $dir/CHECKSUMS.md5.gz\n");
+
+	sysopen (F, "$dir/CHECKSUMS.md5.gz", O_WRONLY|O_TRUNC|O_CREAT) or do {
+		warn "[FATA] Unable to open file $dir/CHECKSUMS.md5.gz: $!";
+		return  ('500', 'text/plain',  "Unable to open file $dir/CHECKSUMS.md5.gz: $!\n");
+	};
+
 	binmode F;
-	syswrite F, $output;
+	$len = length($output);
+	$written = syswrite(F, $output, $len);
 	close F;
+
+	unless (defined($written)) {
+		warn "[FATA] Unable to write $dir/CHECKSUMS.md5.gz: $!";
+		return ('500', 'text/plain', "Unable to write $dir/CHECKSUMS.md5.gz: $!\n");
+	}
+
+	if ($len != $written) {
+		warn "[FATA] Unable to write $dir/CHECKSUMS.md5.gz: written bytes does not match with buffer size";
+		return ('500', 'text/plain', "Unable to write $dir/CHECKSUMS.md5.gz: written bytes does not match with buffer size\n");
+	}
+
 	$output = '';
 
 # packages
@@ -171,17 +251,31 @@ MD5 message digest                Filename
 
 	foreach my $str (@list) {
 		if ($str =~ /\.meta/) {
-			open (F, '<', "$dir/$str") or return  ('500', 'text/plain',  "Unable to open file $dir/$str: $!\n");
+			open (F, '<', "$dir/$str") or do {
+				warn "[FATA] Unable to open file $dir/$str: $!";
+				return  ('500', 'text/plain',  "Unable to open file $dir/$str: $!\n");
+			};
 
-			while(<F>) {
-				$buffer .= $_;
+			my $buf;
+			my $len = (stat("$dir/$str"))[7];
+			my $readlen = read(F, $buf, $len);
+
+			unless (defined($readlen)) {
+				warn "[FATA] Unable to read $dir/$str: $!";
+				return ('500', 'text/plain', "Unable to read $dir/$str: $!\n");
+			}
+
+			if ($readlen != $len) {
+				warn "[FATA] Unable to read $dir/$str: amount of read bytes doed not match with file size";
+				return ('500', 'text/plain', "Unable to read $dir/$str\n");
 			}
 
 			close F;
+			$buffer .= $buf;
 
 # we need exactly 1 \n at the end of the buffer
 			while (substr($buffer, -2, -1) eq "\n") {
-				$buffer = substr($buffer, 0, -2);
+				chop($buffer);
 			}
 
 			$buffer .= "\n\n";
@@ -193,9 +287,27 @@ MD5 message digest                Filename
 		}
 	}
 
-	sysopen (F, "$dir/PACKAGES.TXT", O_WRONLY|O_TRUNC|O_CREAT) or return  ('500', 'text/plain',  "Unable to open file $dir/PACKAGES.TXT: $!\n");
+	sysopen (F, "$dir/PACKAGES.TXT", O_WRONLY|O_TRUNC|O_CREAT) or do {
+		warn "[FATA] Unable to open file $dir/PACKAGES.TXT: $!";
+		return  ('500', 'text/plain',  "Unable to open file $dir/PACKAGES.TXT: $!\n");
+	};
+
 	binmode F;
-	syswrite F, $buffer;
+	use bytes;
+	$len = length($buffer);
+	$written = syswrite(F, $buffer, $len);
+	close F;
+
+	unless (defined($written)) {
+		warn "[FATA] Unable to write $dir/PACKAGES.TXT: $!";
+		return ('500', 'text/plain', "Unable to write $dir/PACKAGES.TXT: $!\n");
+	}
+
+	if ($len != $written) {
+		warn "[FATA] Unable to write $dir/PACKAGES.TXT: written bytes does not match with buffer size";
+		return ('500', 'text/plain', "Unable to write $dir/PACKAGES.TXT: written bytes does not match with buffer size\n");
+	}
+
 	close F;
 
 	$gz = new Compress::Raw::Zlib::Deflate (
@@ -206,22 +318,42 @@ MD5 message digest                Filename
 	);
 
 	unless (defined($gz)) {
+		warn "[FATA] Unable to create gz object";
 		return  ('500', 'text/plain',  "Unable to create gz object\n");
 	}
 
 	if ($gz->deflate($buffer, $output) != Z_OK) {
+		warn "[FATA] Unable to deflate";
 		return  ('500', 'text/plain',  "Unable to deflate\n");
 	}
 
 	if ($gz->flush($output) != Z_OK) {
+		warn "[FATA] Unable to flush gz object";
 		return  ('500', 'text/plain',  "Unable to flush gz object\n");
 	}
 
 	$gz = '';
 	$buffer = '';
-	sysopen (F, "$dir/PACKAGES.TXT.gz", O_WRONLY|O_TRUNC|O_CREAT) or return  ('500', 'text/plain',  "Unable to open file $dir/PACKAGES.TXT.gz\n");
+
+	sysopen (F, "$dir/PACKAGES.TXT.gz", O_WRONLY|O_TRUNC|O_CREAT) or do {
+		warn "[FATA] Unable to open file $dir/PACKAGES.TXT.gz: $!";
+		return  ('500', 'text/plain',  "Unable to open file $dir/PACKAGES.TXT.gz: $!\n");
+	};
+
 	binmode F;
-	syswrite F, $output;
+	$len = length($output);
+	$written = syswrite(F, $output, $len);
+
+	unless (defined($written)) {
+		warn "[FATA] Unable to write $dir/PACKAGES.TXT.gz: $!";
+		return ('500', 'text/plain', "Unable to write $dir/PACKAGES.TXT.gz: $!\n");
+	}
+
+	if ($len != $written) {
+		warn "[FATA] Unable to write $dir/PACKAGES.TXT.gz: written bytes does not match with buffer size";
+		return ('500', 'text/plain', "Unable to write $dir/PACKAGES.TXT.gz: written bytes does not match with buffer size\n");
+	}
+
 	close F;
 	$output = '';
 
@@ -250,11 +382,31 @@ refresh the mirror.
 		$str;
 	} @list;
 
-	sysopen(F, "$dir/FILELIST.TXT", O_WRONLY|O_TRUNC|O_CREAT) or return  ('500', 'text/plain', "Unable to open $dir/FILELIST.TXT\n");
-	binmode F;
-	syswrite F, join('', @list);
-	close F;
+	sysopen(F, "$dir/FILELIST.TXT", O_WRONLY|O_TRUNC|O_CREAT) or do {
+		warn "[FATA] Unable to open $dir/FILELIST.TXT: $!";
+		return  ('500', 'text/plain', "Unable to open $dir/FILELIST.TXT: $!\n");
+	};
 
+	binmode F;
+	$buffer = join('', @list);
+	@list = -1; undef @list;
+	use bytes;
+	$len = length($buffer);
+	no bytes;
+	$written = syswrite F, $buffer, $len;
+
+	unless (defined($written)) {
+		warn "[FATA] Unable to write $dir/FILELIST.TXT: $!";
+		return ('500', 'text/plain', "Unable to write $dir/FILELIST.TXT: $!\n");
+	}
+
+	if ($len != $written) {
+		warn "[FATA] Unable to write $dir/FILELIST.TXT: written bytes does not match with buffer size";
+		return ('500', 'text/plain', "Unable to write $dir/FILELIST.TXT: written bytes does not match with buffer size\n");
+	}
+
+	close F;
+	$buffer = '';
 	return  ('200', 'text/plain', "Done\n");
 }
 
