@@ -17,7 +17,7 @@ sub joyproxy ($) {
 	my $str = shift;
 	chomp($str);
 
-	return ('500', 'text/plain', 'This is not reactor video') if ($str !~ /^img1\.reactor\.cc/);
+	return ('500', 'text/plain', 'This is not reactor video') if ($str !~ /^img[0|1]\.reactor\.cc/);
 
 	my ($file, $filesize) = __dlfunc("http://$str");
 
