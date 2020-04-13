@@ -3,7 +3,7 @@ package joyproxy;
 use strict;
 use warnings "all";
 use lib qw(./lib ./vendor_perl);
-use Fcntl qw(O_RDONLY O_WRONLY);
+use Fcntl qw(O_RDONLY O_WRONLY O_CREAT O_TRUNC);
 use HTTP::Tiny;
 use URI::URL;
 
@@ -48,6 +48,7 @@ sub __urlencode($) {
 	my $str = shift;
 	my $urlobj = url $str;
 	$str = $urlobj->as_string;
+	$urlobj = undef;
 	undef $urlobj;
 	return $str;
 }
@@ -67,10 +68,10 @@ sub __dlfunc($) {
 	$file = "/tmp/joyproxy/" . $file;
 	$url = __urlencode($url);
 
-	my $http = HTTP::Tiny->new();
-	my $response = $http->mirror(
+	my $http = HTTP::Tiny->new(max_size => 10485760);
+
+	my $response = $http->get(
 		$url,
-		$file,
 		{
 			headers => {
 				"Accept" => '*/*',
@@ -84,15 +85,27 @@ sub __dlfunc($) {
 	);
 
 	if ($response->{success}) {
-		my $filesize = (stat($file))[7];
-
-		if ($filesize > 10485760) {
-			unlink $file;
+		sysopen (FILE, $file, O_WRONLY|O_CREAT|O_TRUNC) or do {
+			$http = undef;
+			$response = undef;
 			return (undef, undef);
-		} else {
-			return ($file, $filesize);
-		}
+		};
+
+		my $filesize = length($response->{content});
+
+		syswrite (FILE, $response->{content}, $filesize) or do {
+			$http = undef;
+			$response = undef;
+			return (undef, undef);
+		};
+
+		close FILE;
+		$http = undef;
+		$response = undef;
+		return ($file, $filesize);
 	} else {
+		$http = undef;
+		$response = undef;
 		return (undef, undef);
 	}
 }
