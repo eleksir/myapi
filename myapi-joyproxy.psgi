@@ -27,7 +27,13 @@ my $app = sub {
 		}
 	}
 
-
+	if ($env->{PATH_INFO} =~ /$prefix\/joyurl/) {
+		if (defined($env->{QUERY_STRING})) {
+			($status, $content, $msg) = joyurl($env->{QUERY_STRING});
+		} else {
+			($status, $content, $msg) = joyurl('');
+		}
+	}
 
 	return [
 		$status,

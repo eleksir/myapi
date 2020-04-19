@@ -6,18 +6,21 @@ use lib qw(./lib ./vendor_perl);
 use Fcntl qw(O_RDONLY O_WRONLY O_CREAT O_TRUNC);
 use HTTP::Tiny;
 use URI::URL;
+use URI::Escape;
+use conf;
 
 use Exporter qw(import);
 use vars qw/$VERSION/;
 $VERSION = "1.0";
-our @EXPORT = qw(joyproxy);
+our @EXPORT = qw(joyproxy joyurl);
 
+my $CONF = loadConf();
 
 sub joyproxy ($) {
 	my $str = shift;
 	chomp($str);
 
-	return ('500', 'text/plain', 'This is not reactor video') if ($str !~ /^img[0|1]\.reactor\.cc/);
+	return ('500', 'text/plain', 'This is not reactor video') if ($str !~ /^img[0-9]+\.reactor\.cc/);
 
 	my ($file, $filesize) = __dlfunc("http://$str");
 
@@ -44,6 +47,57 @@ sub joyproxy ($) {
 	}
 }
 
+sub joyurl ($) {
+	my $str = shift;
+	$str = uri_unescape($str);
+
+	if (length($str) < 60) {
+		$str = '';
+	} else {
+		$str = substr($str, 14);
+	}
+
+	if ($str =~ /^img\d+\.reactor\.cc/) {
+# img1.reactor.cc/pics/post/webm/видосик.webm
+		my @url = split(/\//, $str);
+
+		if (($url[3] eq 'webm' || $url[3] eq 'mp4') and
+		    ($url[4] =~ /\.webm$/ || $url[4] =~ /\.mp4$/)) {
+# we prefer mp4, right?, so
+			my $fname;
+			$fname = substr($url[4], 0, -4) if (substr($url[4], -4, 4) eq '.mp4');
+			$fname = substr($url[4], 0, -5) if (substr($url[4], -5, 6) eq '.webm');
+
+			$str = sprintf(
+				"https://exs-elm.ru%s/joyproxy/%s/%s/%s/mp4/%s.mp4",
+				$CONF->{api}->{prefix},
+				$url[0],
+				$url[1],
+				$url[2],
+				$fname
+			);
+
+			$str = __urlencode($str);
+		} else {
+			$str = '';
+		}
+	} else {
+		$str = '';
+	}
+
+	my $msg = "<html>
+<body>
+<form method='get' action='$CONF->{api}->{prefix}/joyurl'>
+<input type='text' name='joyurl' size=100 autofocus><br />
+<input type='submit' value='Post it!'' style='font-size:115%;'' />
+<br>$str
+</body>
+</html>
+";
+
+	return ('200', 'text/html', $msg);
+}
+
 sub __urlencode($) {
 	my $str = shift;
 	my $urlobj = url $str;
@@ -52,7 +106,6 @@ sub __urlencode($) {
 	undef $urlobj;
 	return $str;
 }
-
 
 sub __dlfunc($) {
 	my $url = shift;
@@ -64,7 +117,7 @@ sub __dlfunc($) {
 
 	my @tmparray = split(/\//, $url);
 	my $file = $tmparray[@tmparray - 1];
-	@tmparray = -1; undef @tmparray;
+	$#tmparray = -1; undef @tmparray;
 	$file = "/tmp/joyproxy/" . $file;
 	$url = __urlencode($url);
 
