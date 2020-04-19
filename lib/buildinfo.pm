@@ -5,7 +5,6 @@ use warnings "all";
 use vars qw/$VERSION/;
 use conf;
 use JSON::XS;
-use Data::Dumper;
 
 use Exporter qw(import);
 our @EXPORT = qw(buildinfo);
