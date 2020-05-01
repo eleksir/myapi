@@ -12,3 +12,4 @@ requires 'Telegram::Bot';
 requires 'URI::URL';
 requires 'Compress::Raw::Bzip2';
 requires 'Compress::Raw::Zlib';
+requires 'File::Path';

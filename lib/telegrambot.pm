@@ -4,6 +4,7 @@ use strict;
 use warnings "all";
 use vars qw/$VERSION/;
 use v5.10.0;
+use File::Path qw( mkpath );
 use Hailo;
 use Encode;
 use Data::Dumper;
@@ -21,18 +22,40 @@ my $hailo;
 
 has token => $c->{telegrambot}->{token};
 
+sub __cron {
+	my $self = shift;
+# noop
+	return;
+}
+
 sub __on_msg {
 	my ($self, $msg) = @_;
+#	warn Dumper($msg); # debug
+# lazy init chat-bot brains
+	unless (defined($hailo->{$msg->chat->id})) {
+		$hailo->{$msg->chat->id} = Hailo->new(
+# we'll got file like this: data/telegrambot-brains/-1001332512695.brain.sqlite
+			brain => sprintf("%s/%s.brain.sqlite", $c->{telegrambot}->{braindir}, $msg->chat->id),
+			order => 3
+		);
+	}
+
 # is this a 1-on-1 ?
 	if ($msg->chat->type eq 'private') {
-		$msg->reply("Общайтесь в чате \@slackware_ru");
+		my $text = encode('utf-8', $msg->text);
+		my $reply = $hailo->{$msg->chat->id}->learn_reply(decode('utf-8', $text));
 
+		if (defined($reply) && $reply ne '') {
+			$msg->reply($reply);
+		} else {
+# if we have no answer, say something default in private chat
+			$msg->reply("Общайтесь в чате \@slackware_ru");
+		}
 # group chat
 	} elsif (($msg->chat->type eq 'supergroup') or ($msg->chat->type eq 'group')) {
 		my $reply;
 
 		if ($msg->chat->can('new_chat_members')) {
-warn sprintf("New member in chat. %s", Dumper($msg->chat)),
 			my $usernick = '';
 
 			if (defined($msg->chat->new_chat_members->first_name) and ($msg->chat->new_chat_members->first_name ne '')) {
@@ -47,11 +70,7 @@ warn sprintf("New member in chat. %s", Dumper($msg->chat)),
 				}
 			}
 
-			$usernick = $msg->chat->new_chat_members->username if ($usernick =~ /^\s+$/);
-
-			$reply = sprintf("Добрый вечер, %s, располагайтесь, наслаждайтесь. Мы вас внимательно алё.", $usernick);
 		} elsif ($msg->chat->can('left_chat_member')) {
-warn sprintf("Member left chat. %s", Dumper($msg->chat));
 			my $usernick = '';
 
 			if (defined($msg->chat->left_chat_member->first_name) and ($msg->chat->left_chat_member->first_name ne '')) {
@@ -65,10 +84,6 @@ warn sprintf("Member left chat. %s", Dumper($msg->chat));
 					$usernick .= $msg->chat->left_chat_member->first_name;
 				}
 			}
-
-			$usernick = $msg->chat->left_chat_member->username if ($usernick =~ /^\s+$/);
-
-			$reply = sprintf("До свидания, уважаемый %s. Возвращайтесь ещё. Мы будем рады вас опять...", $usernick);
 		} else {
 			return unless(defined($msg->text));
 			my $text = encode('utf-8', $msg->text);
@@ -95,16 +110,16 @@ warn sprintf("Member left chat. %s", Dumper($msg->chat));
 
 # phrase directed to bot
 			if ((lc($text) =~ /^${qname}[\,|\:]? (.+)/) or (lc($text) =~ /^${qtname}[\,|\:]? (.+)/)){
-				$reply = $hailo->learn_reply(decode('utf-8', $1));
+				$reply = $hailo->{$msg->chat->id}->learn_reply(decode('utf-8', $1));
 # bot mention by name
 			} elsif ((lc($text) =~ /.+ ${qname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qname$/)) {
-				$reply = $hailo->reply(decode('utf-8', $text));
+				$reply = $hailo->{$msg->chat->id}->reply(decode('utf-8', $text));
 # bot mention by teleram name
 			} elsif ((lc($text) =~ /.+ ${qtname}[\,|\!|\?|\.| ]/) or (lc($text) =~ / $qtname$/)) {
-				$reply = $hailo->reply(decode('utf-8', $text));
+				$reply = $hailo->{$msg->chat->id}->reply(decode('utf-8', $text));
 # just message in chat
 			} else {
-				$hailo->learn(decode('utf-8', $text));
+				$hailo->{$msg->chat->id}->learn(decode('utf-8', $text));
 			}
 		}
 
@@ -115,16 +130,19 @@ warn sprintf("Member left chat. %s", Dumper($msg->chat));
 	} else {
 		return;
 	}
+
+	return;
 }
 
 # setup our bot
 sub init {
-	$hailo = Hailo->new(
-		brain => $c->{telegrambot}->{brain},
-		order => 3
-	);
+	unless (-d $c->{telegrambot}->{braindir}) {
+		mkpath ($c->{telegrambot}->{braindir}, 0, 0755);
+	}
+
 	my $self = shift;
 	$self->add_listener(\&__on_msg);
+#	$self->add_repeating_task(900, \&__cron);
 }
 
 sub run_telegrambot {
