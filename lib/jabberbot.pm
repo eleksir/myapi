@@ -56,7 +56,7 @@ sub __new_bot_message {
 			eval {
 				$bot->SendGroupMessage(
 					$hash{'reply_to'},
-					"/me подаёт водку с маринованным огрчиком для " . (split(/\//,$hash{from_full}))[1]
+					"/me подаёт водку с маринованным огурчиком для " . (split(/\//,$hash{from_full}))[1]
 				);
 			};
 		} elsif ($text eq "$c->{jabberbot}->{aleesa}->{csign}beer") {
